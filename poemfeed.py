@@ -7,8 +7,9 @@ file, so that i can read it in my RSS reader
 from datetime import date, datetime, timedelta
 
 import httpx
+import pytz
 from bs4 import BeautifulSoup
-from rfeed import *
+from feedgen.feed import FeedGenerator
 
 
 def main():
@@ -20,8 +21,7 @@ def main():
     poempage = "https://www.poetryfoundation.org/poems/poem-of-the-day"
     reply = get_page_from_pf(poempage)
     if reply:
-        print(reply)
-        # create_rss_feed(reply)
+        create_rss_feed(reply)
 
 
 def get_page_from_pf(link):
@@ -48,7 +48,8 @@ def get_page_from_pf(link):
     get_first_element_from_poem_url = look_full_poem_url[0]
     full_poem_url = get_first_element_from_poem_url.attrs["href"]
 
-    date_of_poem_str = soup.find("meta", {"name": "dcterms.Date"}).get("content")
+    date_of_poem_str = soup.find("meta", {"name": "dcterms.Date"}).get(
+        "content")
     date_of_poem = datetime.strptime(date_of_poem_str, "%Y-%m-%d")
     date_of_poem = date_of_poem.date()
     today_date = date.today()
@@ -61,29 +62,31 @@ def get_page_from_pf(link):
         return None
 
 
-# def create_rss_feed(poemlink):
-#     """
-#     Takes the link that we fetched and then writes it to an xml file for a feed reader to fetch
-#
-#     :param poemlink: url
-#     :type poemlink: string
-#     """
-#     rss = PyRSS2Gen.RSS2(
-#         title="Jason's PF feed",
-#         link=poemlink,
-#         description="Poem of the day",
-#         lastBuildDate=datetime.now(),
-#         items=[
-#             PyRSS2Gen.RSSItem(
-#                 title=f"Poem for {date.today()}",
-#                 link=poemlink,
-#                 guid=PyRSS2Gen.Guid(f"Poem for {date.today()}"),
-#                 pubDate=datetime.now(),
-#             ),
-#         ],
-#     )
-#
-#     rss.write_xml(open("poem.xml", "w"))
+def create_rss_feed(poemlink):
+    """
+    Takes the link that we fetched
+    and then writes it to an xml file for a feed reader to fetch
+
+    :param poemlink: url
+    :type poemlink: string
+    """
+
+    # Create a feedgen feed instance and populate it with my details
+    poemfeed = FeedGenerator()
+    poemfeed.title("Jason's PF feed")
+    poemfeed.link(href=poemlink)
+    poemfeed.description("Poem of the day")
+    poemfeed.lastBuildDate(datetime.now(pytz.timezone('Asia/Kolkata')))
+
+    # Create an rss entry with the url we scraped and parsed
+    pf_current_entry = poemfeed.add_entry()
+    pf_current_entry.title(f"Poem for {date.today()}")
+    pf_current_entry.link(href=poemlink)
+    pf_current_entry.guid(f"Poem for {date.today()}")
+    pf_current_entry.pubDate(datetime.now(pytz.timezone('Asia/Kolkata')))
+
+    # Write the feed
+    poemfeed.rss_file('poem.xml')
 
 
 #   create and write_to_rss_feed

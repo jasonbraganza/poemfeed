@@ -1,3 +1,6 @@
 .venv/
-.ipynb_checkpoints/
 poem.xml
+.idea/
+.ipynb_checkpoints
+*.ipynb
+.python-version

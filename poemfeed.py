@@ -7,6 +7,7 @@ file, so that i can read it in my RSS reader
 from datetime import date, datetime, timedelta
 
 import httpx
+import json
 import pytz
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
@@ -40,17 +41,30 @@ def get_page_from_pf(link):
     # Remember to update this every once in a while
 
     headers = {
-        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:100.0) Gecko/20100101 Firefox/100.0'}
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0'}
     rawhtml = httpx.get(link, headers=headers)
     soup = BeautifulSoup(rawhtml.text, "html.parser")
 
+    # Get the full poem at its url
     look_full_poem_url = soup.find_all("a", string="Read More")
     get_first_element_from_poem_url = look_full_poem_url[0]
     full_poem_url = get_first_element_from_poem_url.attrs["href"]
+    full_poem_url = "https://www.poetryfoundation.org" + full_poem_url
 
-    date_of_poem_str = soup.find("meta", {"name": "dcterms.Date"}).get(
-        "content")
-    date_of_poem = datetime.strptime(date_of_poem_str, "%Y-%m-%d")
+    # Get date from the poem-a-day page to see if the poem is new
+    ## Old way
+    # date_of_poem_str = soup.find("meta", {"name": "dcterms.Date"}).get(
+    #     "content")
+    # date_of_poem = datetime.strptime(date_of_poem_str, "%Y-%m-%d")
+
+    ## New woy since the site’s moved to some new fangled js framework
+    some_raw_blob = soup.find_all(id="__NUXT_DATA__")[0].text
+    json_blob = json.loads(some_raw_blob)
+    date_of_poem_str = json_blob[616]
+    # How did I find that it was 616? by looking like this for date
+    # `[i for i,x in enumerate(json_cleaned_up) if x == '2024-09-21T00:00:00-05:00']`
+    date_of_poem = datetime.fromisoformat(date_of_poem_str)
+
     date_of_poem = date_of_poem.date()
     today_date = date.today()
 
